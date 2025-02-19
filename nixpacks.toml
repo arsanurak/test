@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs", "meteor", "shadow"]
+
+[phases.build]
+cmds = [
+  "meteor npm install --production"
+]
+
+[start]
+cmd = "meteor run --allow-superuser"
+user = "meteoruser"

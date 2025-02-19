@@ -1,0 +1,44 @@
+FROM node:20-bullseye AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for better caching
+COPY package*.json .
+COPY .meteor .meteor
+
+# Install Meteor
+RUN curl https://install.meteor.com/ | sh
+
+# Ensure Meteor is properly installed
+ENV METEOR_ALLOW_SUPERUSER=true
+ENV PATH="/root/.meteor:$PATH"
+RUN /root/.meteor/meteor --version --allow-superuser
+
+# Install dependencies
+RUN /root/.meteor/meteor npm install --legacy-peer-deps --allow-superuser
+
+# Copy the rest of the application files
+COPY . .
+
+# Build the Meteor application
+RUN /root/.meteor/meteor build --directory /app-build --allow-superuser
+
+# Install production dependencies
+WORKDIR /app-build/bundle/programs/server
+RUN npm install --omit=dev
+
+# --- Production Stage ---
+FROM node:20-bullseye
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from builder stage
+COPY --from=builder /app-build/bundle ./
+
+# Expose Meteor's default port
+EXPOSE 8080
+
+# Start the application
+CMD ["node", "main.js"]
